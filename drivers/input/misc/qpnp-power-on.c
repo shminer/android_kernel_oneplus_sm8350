@@ -33,7 +33,7 @@
 #include <soc/oplus/system/oplus_brightscreen_check.h>
 #endif
 #if IS_ENABLED(CONFIG_OPLUS_FEATURE_QCOM_PMICWD)
-#include <../../soc/oplus/system/include/qcom_pmicwd.h>
+#include "../../soc/oplus/system/include/qcom_pmicwd.h"
 #endif
 
 #define PMIC_VER_8941				0x01
