@@ -45,6 +45,7 @@
 *.tar
 *.xz
 *.symversions
+*.dtbo
 Module.symvers
 modules.builtin
 modules.order
