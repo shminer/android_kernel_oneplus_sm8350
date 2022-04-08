@@ -357,7 +357,12 @@ include scripts/subarch.include
 # Alternatively CROSS_COMPILE can be set in the environment.
 # Default value for CROSS_COMPILE is not to prefix executables
 # Note: Some architectures assign CROSS_COMPILE in their arch/*/Makefile
-ARCH		?= $(SUBARCH)
+override ARCH           := arm64
+override CROSS_COMPILE  := /home/jz/kernel/compile_tools/arm64-gcc/bin/aarch64-elf-
+override CROSS_COMPILE_ARM32    := /home/jz/kernel/compile_tools/arm32-gcc/bin/arm-eabi-
+override LLVM := 1
+override CLANG_TRIPLE := aarch64-linux-gnu
+override LLVM_PATH := /home/jz/kernel/compile_tools/linux-x86/clang-r433403/bin/
 
 # Architecture as present in compile.h
 UTS_MACHINE 	:= $(ARCH)
@@ -395,8 +400,8 @@ HOST_LFS_LDFLAGS := $(shell getconf LFS_LDFLAGS 2>/dev/null)
 HOST_LFS_LIBS := $(shell getconf LFS_LIBS 2>/dev/null)
 
 ifneq ($(LLVM),)
-HOSTCC	= clang
-HOSTCXX	= clang++
+HOSTCC	= $(LLVM_PATH)clang
+HOSTCXX	= $(LLVM_PATH)clang++
 else
 HOSTCC	= gcc
 HOSTCXX	= g++
@@ -411,17 +416,17 @@ KBUILD_HOSTLDLIBS   := $(HOST_LFS_LIBS) $(HOSTLDLIBS)
 # Make variables (CC, etc...)
 CPP		= $(CC) -E
 ifneq ($(LLVM),)
-REAL_CC	= clang
-LD		= ld.lld
-AR		= llvm-ar
-NM		= llvm-nm
-OBJCOPY		= llvm-objcopy
-OBJDUMP		= llvm-objdump
-READELF		= llvm-readelf
-OBJSIZE		= llvm-size
-STRIP		= llvm-strip
+CC	= $(LLVM_PATH)clang
+LD		= $(LLVM_PATH)ld.lld
+AR		= $(LLVM_PATH)llvm-ar
+NM		= $(LLVM_PATH)llvm-nm
+OBJCOPY		= $(LLVM_PATH)llvm-objcopy
+OBJDUMP		= $(LLVM_PATH)llvm-objdump
+READELF		= $(LLVM_PATH)llvm-readelf
+OBJSIZE		= $(LLVM_PATH)llvm-size
+STRIP		= $(LLVM_PATH)llvm-strip
 else
-REAL_CC		= $(CROSS_COMPILE)gcc
+CC		= $(CROSS_COMPILE)gcc
 LD		= $(CROSS_COMPILE)ld
 AR		= $(CROSS_COMPILE)ar
 NM		= $(CROSS_COMPILE)nm
@@ -442,20 +447,12 @@ PYTHON		= python
 PYTHON3		= python3
 CHECK		= sparse
 BASH		= bash
-KGZIP		= gzip
+KGZIP		= pigz
 KBZIP2		= bzip2
 KLZOP		= lzop
 LZMA		= lzma
 LZ4		= lz4c
 XZ		= xz
-
-ifndef DISABLE_WRAPPER
-# Use the wrapper for the compiler.  This wrapper scans for new
-# warnings and causes the build to stop upon encountering them
-CC		= $(srctree)/scripts/gcc-wrapper.py $(REAL_CC)
-else
-CC		= $(REAL_CC)
-endif
 
 CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
 		  -Wbitwise -Wno-return-void -Wno-unknown-attribute $(CF)
@@ -485,9 +482,8 @@ LINUXINCLUDE    := \
 		$(USERINCLUDE)
 
 KBUILD_AFLAGS   := -D__ASSEMBLY__ -fno-PIE
-KBUILD_CFLAGS   := -Wall -Wundef -Werror=strict-prototypes -Wno-trigraphs \
+KBUILD_CFLAGS   := -Wall -Wundef -Werror -Wno-trigraphs \
 		   -fno-strict-aliasing -fno-common -fshort-wchar -fno-PIE \
-		   -Werror=implicit-function-declaration -Werror=implicit-int \
 		   -Wno-format-security \
 		   -std=gnu89
 KBUILD_CPPFLAGS := -D__KERNEL__
@@ -660,7 +656,6 @@ endif
 ifneq ($(LLVM_IAS),1)
 CLANG_FLAGS	+= -no-integrated-as
 endif
-CLANG_FLAGS	+= -Werror=unknown-warning-option
 KBUILD_CFLAGS	+= $(CLANG_FLAGS)
 KBUILD_AFLAGS	+= $(CLANG_FLAGS)
 export CLANG_FLAGS
@@ -773,8 +768,8 @@ export RETPOLINE_VDSO_CFLAGS
 ifdef CONFIG_LTO_CLANG
 # LTO produces LLVM IR instead of object files. Use llvm-ar and llvm-nm, so we
 # can process these.
-AR		:= llvm-ar
-LLVM_NM		:= llvm-nm
+AR		:= $(LLVM_PATH)llvm-ar
+LLVM_NM		:= $(LLVM_PATH)llvm-nm
 export LLVM_NM
 endif
 
@@ -877,15 +872,15 @@ KBUILD_CFLAGS += $(call cc-disable-warning, undefined-optimized)
 KBUILD_CFLAGS += -fno-builtin
 else
 
-# These warnings generated too much noise in a regular build.
-# Use make W=1 to enable them (see scripts/Makefile.extrawarn)
-KBUILD_CFLAGS += -Wno-unused-but-set-variable
-
 # Warn about unmarked fall-throughs in switch statement.
 # Disabled for clang while comment to attribute conversion happens and
 # https://github.com/ClangBuiltLinux/linux/issues/636 is discussed.
 KBUILD_CFLAGS += $(call cc-option,-Wimplicit-fallthrough,)
 endif
+
+# These warnings generated too much noise in a regular build.
+# Use make W=1 to enable them (see scripts/Makefile.extrawarn)
+KBUILD_CFLAGS += $(call cc-disable-warning, unused-but-set-variable)
 
 KBUILD_CFLAGS += $(call cc-disable-warning, unused-const-variable)
 ifdef CONFIG_FRAME_POINTER
@@ -1079,23 +1074,8 @@ KBUILD_CFLAGS  += $(call cc-option,-fno-stack-check,)
 # conserve stack if available
 KBUILD_CFLAGS   += $(call cc-option,-fconserve-stack)
 
-# Prohibit date/time macros, which would make the build non-deterministic
-KBUILD_CFLAGS   += $(call cc-option,-Werror=date-time)
-
-# enforce correct pointer usage
-KBUILD_CFLAGS   += $(call cc-option,-Werror=incompatible-pointer-types)
-
-# Require designated initializers for all marked structures
-KBUILD_CFLAGS   += $(call cc-option,-Werror=designated-init)
-
 # change __FILE__ to the relative path from the srctree
 KBUILD_CFLAGS	+= $(call cc-option,-fmacro-prefix-map=$(srctree)/=)
-
-# ensure -fcf-protection is disabled when using retpoline as it is
-# incompatible with -mindirect-branch=thunk-extern
-ifdef CONFIG_RETPOLINE
-KBUILD_CFLAGS += $(call cc-option,-fcf-protection=none)
-endif
 
 include scripts/Makefile.kasan
 include scripts/Makefile.extrawarn
@@ -1199,7 +1179,7 @@ HOST_LIBELF_LIBS = $(shell pkg-config libelf --libs 2>/dev/null || echo -lelf)
 
 ifdef CONFIG_STACK_VALIDATION
   has_libelf := $(call try-run,\
-		echo "int main() {}" | $(HOSTCC) -xc -o /dev/null $(HOST_LIBELF_LIBS) -,1,0)
+		echo "int main() {}" | $(HOSTCC) $(KBUILD_HOSTLDFLAGS) -xc -o /dev/null $(HOST_LIBELF_LIBS) -,1,0)
   ifeq ($(has_libelf),1)
     objtool_target := tools/objtool FORCE
   else
@@ -1361,11 +1341,19 @@ define filechk_utsrelease.h
 endef
 
 define filechk_version.h
-	echo \#define LINUX_VERSION_CODE $(shell                         \
-	expr $(VERSION) \* 65536 + 0$(PATCHLEVEL) \* 256 + 0$(SUBLEVEL)); \
-	echo '#define KERNEL_VERSION(a,b,c) (((a) << 16) + ((b) << 8) + (c))'
+	if [ $(SUBLEVEL) -gt 255 ]; then                                 \
+		echo \#define LINUX_VERSION_CODE $(shell                 \
+		expr $(VERSION) \* 65536 + $(PATCHLEVEL) \* 256 + 255); \
+	else                                                             \
+		echo \#define LINUX_VERSION_CODE $(shell                 \
+		expr $(VERSION) \* 65536 + $(PATCHLEVEL) \* 256 + $(SUBLEVEL)); \
+	fi;                                                              \
+	echo '#define KERNEL_VERSION(a,b,c) (((a) << 16) + ((b) << 8) +  \
+	((c) > 255 ? 255 : (c)))'
 endef
 
+$(version_h): PATCHLEVEL := $(if $(PATCHLEVEL), $(PATCHLEVEL), 0)
+$(version_h): SUBLEVEL := $(if $(SUBLEVEL), $(SUBLEVEL), 0)
 $(version_h): FORCE
 	$(call filechk,version.h)
 	$(Q)rm -f $(old_version_h)
