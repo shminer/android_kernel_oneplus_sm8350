@@ -41,7 +41,7 @@
 #endif
 #endif /* OPLUS_FEATURE_HEALTHINFO */
 #if defined(OPLUS_FEATURE_SCHED_ASSIST) && defined(CONFIG_OPLUS_FEATURE_SCHED_ASSIST)
-#include <../special_opt/special_opt.h>
+#include "../special_opt/special_opt.h"
 #endif /* defined(OPLUS_FEATURE_SCHED_ASSIST) && defined(CONFIG_OPLUS_FEATURE_SCHED_ASSIST) */
 
 #ifdef CONFIG_SMP

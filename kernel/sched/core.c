@@ -33,7 +33,7 @@
 #include <trace/hooks/sched.h>
 #if defined(OPLUS_FEATURE_SCHED_ASSIST) && defined(CONFIG_OPLUS_FEATURE_SCHED_ASSIST)
 #include <linux/sched_assist/sched_assist_common.h>
-#include <../special_opt/special_opt.h>
+#include "../special_opt/special_opt.h"
 #endif /* defined(OPLUS_FEATURE_SCHED_ASSIST) && defined(CONFIG_OPLUS_FEATURE_SCHED_ASSIST) */
 
 #if defined(OPLUS_FEATURE_SCHED_ASSIST) && defined(CONFIG_OPLUS_FEATURE_SCHED_ASSIST)
